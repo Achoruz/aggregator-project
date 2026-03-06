@@ -1,6 +1,7 @@
 package main
 
 import (
+	"aggregator-project/internal/db"
 	"database/sql"
 	"log"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 )
 
 type apiConfig struct {
-	DB *database.Queries
+	DB *db.Queries
 }
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 
 
 	apiCfg := apiConfig{
-		DB: database.New(conn),
+		DB: db.New(conn),
 	}
 
 	router := chi.NewRouter()
@@ -53,6 +54,14 @@ func main() {
 	v1Router.Get("/healthz", handlerReadiness)
 	v1Router.Get("/err", handlerErr)
 	v1Router.Post("/users", apiCfg.handlerCreateUser)
+	v1Router.Get("/users", apiCfg.middlewareAuth(apiCfg.handlerGetUser))
+	
+	v1Router.Post("/feeds", apiCfg.middlewareAuth(apiCfg.handlerCreateFeed))
+	v1Router.Get("/feeds", apiCfg.handlerGetFeeds)
+	
+	v1Router.Post("/feed_follows", apiCfg.middlewareAuth(apiCfg.handlerCreateFeedFollow))
+	v1Router.Get("/feed_follows", apiCfg.middlewareAuth(apiCfg.handlerGetFeedFollows))
+	v1Router.Delete("/feed_follows/{feedFollowID}", apiCfg.middlewareAuth(apiCfg.handlerDeleteFeedFollows))
 
 	router.Mount("/v1", v1Router)
 
@@ -62,7 +71,7 @@ func main() {
 	}
 
 	log.Printf("Server Starting on port %v", portString)
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}
